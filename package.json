@@ -1,0 +1,13 @@
+{
+  "name": "rnkstudios-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static file server + /api and LiveKit proxy for rnkstudios.uk. Node stdlib only — no runtime dependencies.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
