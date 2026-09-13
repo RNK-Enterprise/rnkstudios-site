@@ -8,7 +8,9 @@ module.exports = {
       watch: false,
       env: {
         NODE_ENV: 'production',
-        PORT: '3003',
+        // 3003 was taken over by rnk-enterprise-website; the static+proxy
+        // server runs alongside it here until a slot is decided for it.
+        PORT: '3013',
         RNK_API_PORT: '3001'
       },
       error_file: '/home/rnk/.pm2/logs/rnkstudios-site-error.log',
