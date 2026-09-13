@@ -5,7 +5,9 @@ const path = require('path');
 const net = require('net');
 const { URL } = require('url');
 
-const ROOT = path.join('/home/rnk/rnkstudios-site', 'dist');
+// Dist root — overridable so CI and local tests can boot against a fixture
+// directory; production default is unchanged.
+const ROOT = process.env.RNK_DIST_DIR || path.join('/home/rnk/rnkstudios-site', 'dist');
 // Origins allowed to read /api/* responses with credentials. Anything else
 // gets no ACAO header, so the browser blocks the read — reflected-origin
 // with credentials would let any site read authenticated responses.

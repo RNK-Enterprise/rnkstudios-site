@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server boot + guard checks (zero dependencies)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Syntax
+        run: node --check server.js
+
+      # RNK_DIST_DIR lets the server boot against a fixture instead of the
+      # hardcoded production path; manifest/package checks keep npm start honest
+      - name: Boot against fixture + guard probes
+        run: |
+          mkdir -p /tmp/ci-dist
+          echo "<html>fixture</html>" > /tmp/ci-dist/index.html
+          echo "SECRET-OUTSIDE" > /tmp/outside-secret.txt
+          RNK_DIST_DIR=/tmp/ci-dist PORT=3993 node server.js &
+          SERVER_PID=$!
+          sleep 1
+          echo "--- serves fixture:"
+          BODY=$(curl -s http://127.0.0.1:3993/)
+          echo "$BODY" | grep -q fixture || { echo "FAIL: no fixture body"; exit 1; }
+          echo "--- traversal probes serve index, never outside files:"
+          P1=$(curl -s "http://127.0.0.1:3993/../outside-secret.txt" --path-as-is)
+          P2=$(curl -s "http://127.0.0.1:3993/%2e%2e/outside-secret.txt" --path-as-is)
+          echo "$P1" | grep -q fixture || { echo "FAIL: ../ escaped → $P1"; exit 1; }
+          echo "$P2" | grep -q fixture || { echo "FAIL: %2e%2e escaped → $P2"; exit 1; }
+          echo "$P1$P2" | grep -q SECRET && { echo "FAIL: secret leaked"; exit 1; }
+          echo "--- CORS: evil origin gets no ACAO:"
+          curl -s -D- -o /dev/null http://127.0.0.1:3993/api/x -H "Origin: https://evil.example" | grep -qi access-control-allow-origin && { echo "FAIL: ACAO leaked"; exit 1; }
+          kill $SERVER_PID
+          echo "server checks OK"
+          grep -q '"main": "server.js"' package.json
